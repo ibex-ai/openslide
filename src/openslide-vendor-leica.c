@@ -498,6 +498,9 @@ static struct collection *parse_xml_description(const char *xml,
                        image->nm_across == collection->nm_across &&
                        image->nm_down == collection->nm_down);
 
+    // assume first image is macro
+    image->is_macro = i == 0;
+
     // get dimensions
     ctx->node = image_node;
     result = _openslide_xml_xpath_eval(ctx, "d:pixels/d:dimension");
@@ -594,6 +597,8 @@ static bool create_levels_from_collection(openslide_t *osr,
                                           GPtrArray *levels,
                                           int64_t *quickhash_dir,
                                           GError **err) {
+  g_debug("create_levels_from_collection starting");
+
   *quickhash_dir = -1;
 
   // set barcode property
@@ -641,9 +646,17 @@ static bool create_levels_from_collection(openslide_t *osr,
                first_main_image->illumination_source) ||
         strcmp(image->objective, first_main_image->objective) ||
         image->dimensions->len != first_main_image->dimensions->len) {
-      g_set_error(err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
-                  "Slides with dissimilar main images are not supported");
-      return false;
+      g_info(
+                  "Slides with dissimilar main images are not supported - so sorry for that %s... \n first_main_image: %d x-offs, %d y-offs, %d nm ac, %d nm dn \n collection: %d nm ac, %d nm dn",
+                  "for - skipping image",
+                  first_main_image->nm_offset_x,
+                  first_main_image->nm_offset_y,
+                  first_main_image->nm_across,
+                  first_main_image->nm_down,
+                  collection->nm_across,
+                  collection->nm_down
+      );
+      continue; // return false;
     }
 
     // add all the IFDs to the level list
