@@ -144,14 +144,28 @@ static bool decode_tile(struct level *l,
   case APERIO_COMPRESSION_JP2K_MCT:
     space = OPENSLIDE_JP2K_RGB;
     break;
-  default:
-    // not for us? fallback
-    return _openslide_tiff_read_tile(tiffl, tiff, dest,
-                                     tile_col, tile_row,
-                                     err);
+  default: {
+    // In large SVS Aperio images, a tile (typically 0,0) in one or more
+    // levels is partly overwritten, corrupting the JPEG marker (first byte
+    // becomes 0x11).  Detect and substitute a blank tile instead of trying
+    // to decode garbage data.
+    g_autofree void *buf = NULL;
+    int32_t buflen;
+    if (!_openslide_tiff_read_tile_data(tiffl, tiff,
+                                        &buf, &buflen,
+                                        tile_col, tile_row,
+                                        err)) {
+      return false;
+    }
+    const unsigned char *bytes = buf;
+    if (bytes[0] == 0x11 || (bytes[0] == 0xff && bytes[1] == 0x11)) {
+      return render_missing_tile(l, tiff, dest, tile_col, tile_row, err);
+    }
+    return _openslide_tiff_read_tile(tiffl, tiff, dest, tile_col, tile_row, err);
+  }
   }
 
-  // read raw tile
+  // read raw tile (JP2K path)
   g_autofree void *buf = NULL;
   int32_t buflen;
   if (!_openslide_tiff_read_tile_data(tiffl, tiff,
