@@ -50,6 +50,7 @@ static const char MAGNIFICATION_KEY[] = "mag";
 
 static const char INITIAL_XML_ISCAN[] = "iScan";
 static const char INITIAL_XML_ALT_ROOT[] = "Metadata";
+static const char SCANNER_MODEL_DP_200[] = "VENTANA DP 200";
 
 static const char ATTR_AOI_SCANNED[] = "AOIScanned";
 static const char ATTR_WIDTH[] = "Width";
@@ -770,9 +771,9 @@ static struct _openslide_grid *create_bif_grid(openslide_t *osr,
       for (int64_t col = 0; col < area->tiles_across; col++) {
         if (is_dp200) {
           // use the tile offsets only for DP 200 scans.
-          struct tile *tile = area->tiles[row * area->tiles_across + col];
-          offset_x += tile->offset_x;
-          offset_ys[col] += tile->offset_y;
+          struct tile tile = area->tiles[row * area->tiles_across + col];
+          offset_x += tile.offset_x;
+          offset_ys[col] += tile.offset_y;
         }
         _openslide_grid_tilemap_add_tile(grid,
                                          area->start_col + col,
