@@ -352,6 +352,30 @@ bool _openslide_tiff_read_tile_data(struct _openslide_tiff_level *tiffl,
   return true;
 }
 
+bool _openslide_tiff_check_missing_tile(struct _openslide_tiff_level *tiffl,
+                                        TIFF *tiff,
+                                        int64_t tile_col, int64_t tile_row,
+                                        bool *is_missing,
+                                        GError **err) {
+  if (!_openslide_tiff_set_dir(tiff, tiffl->dir, err)) {
+    return false;
+  }
+
+  ttile_t tile_no = TIFFComputeTile(tiff,
+                                    tile_col * tiffl->tile_w,
+                                    tile_row * tiffl->tile_h,
+                                    0, 0);
+
+  toff_t *sizes;
+  if (!TIFFGetField(tiff, TIFFTAG_TILEBYTECOUNTS, &sizes)) {
+    _openslide_tiff_error(err, tiff, "Cannot get tile byte counts");
+    return false;
+  }
+
+  *is_missing = (sizes[tile_no] == 0);
+  return true;
+}
+
 bool _openslide_tiff_missing_tiles_to_simple_grid(struct _openslide_tiff_level *tiffl,
                                                   TIFF *tiff,
                                                   struct _openslide_grid *grid,
